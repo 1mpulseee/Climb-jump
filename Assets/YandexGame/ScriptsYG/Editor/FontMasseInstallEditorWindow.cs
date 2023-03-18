@@ -2,11 +2,11 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 
-namespace YG
+namespace YG.Insides
 {
     public class FontMasseInstallEditorWindow : EditorWindow
     {
-        [MenuItem("YG/Localization/Font Default Masse")]
+        [MenuItem("Tools/PluginYG/Localization/Font Default Masse")]
         public static void ShowWindow()
         {
             GetWindow<FontMasseInstallEditorWindow>("Font Default Masse");
@@ -112,7 +112,7 @@ namespace YG
 
             for (int i = 0; i < objectsTranlate.Count; i++)
             {
-                objectsTranlate[i] = (GameObject)EditorGUILayout.ObjectField($"{i + 1}. { objectsTranlate[i].name}", objectsTranlate[i], typeof(GameObject), false);
+                objectsTranlate[i] = (GameObject)EditorGUILayout.ObjectField($"{i + 1}. {objectsTranlate[i].name}", objectsTranlate[i], typeof(GameObject), false);
             }
 
             if (objectsTranlate.Count > 10 && position.height < objectsTranlate.Count * 20.6f + 150)

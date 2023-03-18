@@ -7,14 +7,19 @@ namespace YG
 {
     public class ImageLoadYG : MonoBehaviour
     {
-        [SerializeField] bool startLoad = true;
-        [SerializeField] RawImage rawImage;
-        [SerializeField] string urlImage;
-        [SerializeField] GameObject loadAnimObj;
+        public bool startLoad = true;
+        public RawImage rawImage;
+        public Image spriteImage;
+        public string urlImage;
+        public GameObject loadAnimObj;
+        [Tooltip("Вы можете выключить запись лога в консоль.")]
+        [SerializeField] bool debug;
 
         private void Awake()
         {
-            rawImage.enabled = false;
+            if (rawImage) rawImage.enabled = false;
+            if (spriteImage) spriteImage.enabled = false;
+
             if (startLoad) Load();
             else if (loadAnimObj) loadAnimObj.SetActive(false);
         }
@@ -43,14 +48,30 @@ namespace YG
 
                 if (webRequest.result == UnityWebRequest.Result.ConnectionError ||
                     webRequest.result == UnityWebRequest.Result.DataProcessingError)
-                    Debug.LogError("Error: " + webRequest.error);
+                {
+                    if (debug)
+                        Debug.LogError("Error: " + webRequest.error);
+                }
                 else
                 {
                     DownloadHandlerTexture handlerTexture = webRequest.downloadHandler as DownloadHandlerTexture;
-                    if (handlerTexture.isDone)
-                        rawImage.texture = handlerTexture.texture;
 
-                    rawImage.enabled = true;
+                    if (rawImage)
+                    {
+                        if (handlerTexture.isDone)
+                            rawImage.texture = handlerTexture.texture;
+                        rawImage.enabled = true;
+                    }
+
+                    if (spriteImage)
+                    {
+                        if (handlerTexture.isDone)
+                            spriteImage.sprite = Sprite.Create((Texture2D)handlerTexture.texture,
+                                new Rect(0, 0, handlerTexture.texture.width, handlerTexture.texture.height), Vector2.zero);
+
+                        spriteImage.enabled = true;
+                    }
+
                     if (loadAnimObj)
                         loadAnimObj.SetActive(false);
                 }

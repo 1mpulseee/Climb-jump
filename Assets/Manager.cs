@@ -4,8 +4,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using YG;
-using UnityEngine.UI;
-
 public class Manager : MonoBehaviour
 {
     public static Manager Instance { get; private set; }
@@ -70,8 +68,8 @@ public class Manager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
-
-        if (YandexGame.savesData.CoinIsRaised.Length == 0)
+        Debug.Log(YandexGame.savesData.CoinIsRaised);
+        if (YandexGame.savesData.CoinIsRaised == null)
         {
             CoinIsRaised = new bool[CoinsList.Count];
             YandexGame.savesData.CoinIsRaised = CoinIsRaised;
@@ -83,7 +81,15 @@ public class Manager : MonoBehaviour
             YandexGame.savesData.CoinIsRaised = CoinIsRaised;
         }
         TargetCheckpoints = YandexGame.savesData.TargetCheckpoints;
-        Money = YandexGame.savesData.Money;
+        int _money = 0;
+        for (int i = 0; i < CoinIsRaised.Length; i++)
+        {
+            if (CoinIsRaised[i])
+            {
+                _money++;
+            }
+        }
+        Money = _money;
 
         DisableCheckpoints();
         DisableMoney();

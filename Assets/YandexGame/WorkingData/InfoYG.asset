@@ -15,8 +15,11 @@ MonoBehaviour:
   scopes: 1
   playerPhotoSize: 0
   leaderboardEnable: 1
-  fullscreenAdChallenge: 0
-  fullscreenAdInterval: 60
+  saveCloud: 1
+  flush: 0
+  saveCloudInterval: 5
+  AdWhenLoadingScene: 1
+  fullscreenAdInterval: 5
   durationOfAdSimulation: 0.5
   LocalizationEnable: 0
   callingLanguageCheck: 0
@@ -111,6 +114,6 @@ MonoBehaviour:
     de: 
     hi: 
   debug: 1
+  autoBuildArchiving: 1
   staticRBTInGame: 0
-  sitelock: 0
   SDKStartDelay: 0

@@ -11,6 +11,10 @@
     <!-- Yandex Games SDK -->
     <script src="https://yandex.ru/games/sdk/v2"></script>
 
+    #if METRIC
+    {{{ METRIC }}}
+    #endif
+
     #if BANNER_DYNAMIC_1
     <style>
         #RTB1 {
@@ -18,9 +22,9 @@
             display: none;
         }
 
-        #RTB1.show {
-            display: block;
-        }
+            #RTB1.show {
+                display: block;
+            }
     </style>
     #endif
 
@@ -31,9 +35,9 @@
             display: none;
         }
 
-        #RTB2.show {
-            display: block;
-        }
+            #RTB2.show {
+                display: block;
+            }
     </style>
     #endif
 
@@ -48,9 +52,9 @@
             display: none;
         }
 
-        #RTBStatic1.show {
-            display: block;
-        }
+            #RTBStatic1.show {
+                display: block;
+            }
 
         @media screen and (max-width: 800px) {
             #RTBStatic1 {
@@ -74,9 +78,9 @@
             display: none;
         }
 
-        #RTBStatic2.show {
-            display: block;
-        }
+            #RTBStatic2.show {
+                display: block;
+            }
 
         @media screen and (max-width: 800px) {
             #RTBStatic2 {
@@ -266,7 +270,9 @@
 
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         container.className = "unity-mobile";
-        //config.devicePixelRatio = 1;
+        #if PIXEL_RATIO_MOBILE
+        config.devicePixelRatio = {{{ PIXEL_RATIO_MOBILE }}};
+        #endif
     }
 
     //#if BACKGROUND_FILENAME
@@ -282,6 +288,10 @@
     let payments = null;
     let promptCanShow = false;
     let reviewCanShow = false;
+    let initSDK = false;
+    let initGame = false;
+    let photoSizeForInit;
+    let scopesForInit;
 
     const script = document.createElement("script");
     script.src = loaderUrl;
@@ -300,9 +310,9 @@
 
     YaGames.init()
         .then(ysdk => {
-            ysdk.adv.showFullscreenAdv();
+            console.log('Init SDK');
             window.ysdk = ysdk;
-
+            initSDK = true;
             InitPayments();
 
             try {
@@ -332,33 +342,44 @@
             } catch (e) {
                 console.error('CRASH canShowFeedback: ', e.message);
             }
+
+            if (initGame == true) {
+                AuthorizationCheck(photoSizeForInit, scopesForInit)
+                #if !OFF_ADS_BEFORE_LOADING_GAME
+                FullscreenShow();
+                #endif
+            }
+            else {
+                #if !OFF_ADS_BEFORE_LOADING_GAME
+                ysdk.adv.showFullscreenAdv();
+                #endif
+            }
         });
 
-    function PaintRBT(rbt) {
-        try {
-            document.getElementById(rbt).style.background = '#ff0000';
-        } catch (e) {
-            console.error('CRASH Paint RBT: ', e.message);
+    function AuthorizationCheck(photoSize, scopes) {
+        console.log('Init GAME');
+        initGame = true;
+        photoSizeForInit = photoSize;
+        scopesForInit = scopes;
+        if (initSDK == true) {
+            ysdk.features.LoadingAPI?.ready();
+            InitPlayer(photoSize, scopes);
         }
     }
 
-    function StaticRBTDeactivate() {
-        #if BANNER_STATIC_1
+    function NotAuthorized() {
         try {
-            rbtLoadGame1.classList.remove('show');
-            document.getElementById('RTBStatic1').style.display = 'none';
+            console.log('Authorized failed');
+            let authJson = {
+                "playerAuth": "rejected",
+                "playerName": "unauthorized",
+                "playerId": "unauthorized",
+                "playerPhoto": "null"
+            };
+            myGameInstance.SendMessage('YandexGame', 'SetAuthorization', JSON.stringify(authJson));
         } catch (e) {
-            console.error('CRASH off RTBStatic1: ', e.message);
+            console.error('CRASH Not Authorized: ', e.message);
         }
-        #endif
-        #if BANNER_STATIC_2
-        try {
-            rbtLoadGame2.classList.remove('show');
-            document.getElementById('RTBStatic2').style.display = 'none';
-        } catch (e) {
-            console.error('CRASH off RTBStatic2: ', e.message);
-        }
-        #endif
     }
 
     function InitPlayer(photoSize, _scopes) {
@@ -388,33 +409,16 @@
                         "playerPhoto": playerPhoto
                     };
                     myGameInstance.SendMessage('YandexGame', 'SetAuthorization', JSON.stringify(authJson));
+                    window.focus();
                 }
             }).catch(e => {
-                console.log('Authorized err', e.message);
+                console.error('Authorized err: ', e.message);
                 NotAuthorized();
             });
         } catch (e) {
             console.error('CRASH init Player: ', e.message);
+            window.focus();
         }
-    }
-
-    function NotAuthorized() {
-        try {
-            console.log('Authorized failed');
-            let authJson = {
-                "playerAuth": "rejected",
-                "playerName": "unauthorized",
-                "playerId": player.getUniqueID(),
-                "playerPhoto": "null"
-            };
-            myGameInstance.SendMessage('YandexGame', 'SetAuthorization', JSON.stringify(authJson));
-        } catch (e) {
-            console.error('CRASH Not Authorized: ', e.message);
-        }
-    }
-
-    function AuthorizationCheck(photoSize, scopes) {
-        InitPlayer(photoSize, scopes);
     }
 
     function OpenAuthDialog(photoSize, scopes) {
@@ -448,15 +452,18 @@
                 payments.purchase(id).then(purchase => {
                     console.log('Purchase Success');
                     myGameInstance.SendMessage('YandexGame', 'OnPurchaseSuccess', id);
+                    window.focus();
                 }).catch(e => {
                     console.error('Purchase Failed', e.message);
                     myGameInstance.SendMessage('YandexGame', 'OnPurchaseFailed', id);
+                    window.focus();
                 })
             } else {
                 console.log('Payments == null');
             }
         } catch (e) {
             console.error('CRASH Buy Payments: ', e.message);
+            window.focus();
         }
     }
     
@@ -546,9 +553,7 @@
         try {
             player.setData({
                 saves: [jsonData],
-            }, flush).then(() => {
-                console.log('Cloud saves are installed');
-            });
+            }, flush);
         } catch (e) {
             console.error('CRASH Save Cloud: ', e.message);
         }
@@ -560,21 +565,16 @@
                 if (data.saves) {
                     myGameInstance.SendMessage('YandexGame', 'SetLoadSaves', JSON.stringify(data.saves));
                 } else {
-                    ResetProgress();
+                    myGameInstance.SendMessage('YandexGame', 'SetLoadSaves', "noData");
                 }
             }).catch(() => {
                 console.error('getData Error!');
+                myGameInstance.SendMessage('YandexGame', 'SetLoadSaves', "noData");
             });
         } catch (e) {
-            console.error('CRASH Load Saves Cloud: ', e.message);
-            setTimeout(function () {
-                LoadCloud();
-            }, 1000);
+            console.error('CRASH Load saves Cloud: ', e.message);
+            myGameInstance.SendMessage('YandexGame', 'SetLoadSaves', "noData");
         }
-    }
-
-    function ResetProgress() {
-        myGameInstance.SendMessage('YandexGame', 'ResetSaveCloud');
     }
 
     function InitLeaderboard() {
@@ -585,9 +585,6 @@
             });
         } catch (e) {
             console.error('CRASH Init Leaderboard: ', e.message);
-            setTimeout(function () {
-                InitLeaderboard();
-            }, 1000);
         }
     }
 
@@ -693,6 +690,7 @@
                         },
                         onClose: () => {
                             myGameInstance.SendMessage('YandexGame', 'CloseFullscreen');
+                            window.focus();
                         }
                     }
                 });
@@ -714,6 +712,7 @@
                             onClose: () => {
                                 myGameInstance.SendMessage('YandexGame', 'CloseVideo');
                                 console.log('Closed Video Ad. Id: ' + id);
+                                window.focus();
                             },
                             onRewarded: () => {
                                 myGameInstance.SendMessage('YandexGame', 'RewardVideo', id);
@@ -762,21 +761,25 @@
 
     function Review() {
         try {
-            ysdk.feedback.canReview().then(({value, reason}) => {
+            ysdk.feedback.canReview()
+                .then(({ value, reason }) => {
                     if (value) {
                         ysdk.feedback.requestReview().then(({feedbackSent}) => {
                             console.log('feedbackSent ', feedbackSent);
                             if (feedbackSent)
                                 myGameInstance.SendMessage('YandexGame', 'ReviewSent', 'true');
                             else myGameInstance.SendMessage('YandexGame', 'ReviewSent', 'false');
+                            window.focus();
                         })
                     }
                     else {
                         console.log('reviewCanShow = false', reason)
+                        window.focus();
                     }
                 })
         } catch (e) {
             console.error('CRASH Review: ', e.message);
+            window.focus();
         }
     }
 
@@ -789,9 +792,14 @@
                         console.log('Prompt Success');
                         myGameInstance.SendMessage('YandexGame', 'OnPromptSuccess');
                     }
+                    else {
+                        myGameInstance.SendMessage('YandexGame', 'OnPromptFail');
+                    }
+                    window.focus();
                 });
         } catch (e) {
             console.error('CRASH Prompt Show: ', e.message);
+            window.focus();
         }
     }
 
@@ -813,6 +821,33 @@
         } catch (e) {
             console.error('CRASH Sticky Activity: ', e.message);
         }
+    }
+
+    function PaintRBT(rbt) {
+        try {
+            document.getElementById(rbt).style.background = '#ff0000';
+        } catch (e) {
+            console.error('CRASH Paint RBT: ', e.message);
+        }
+    }
+
+    function StaticRBTDeactivate() {
+        #if BANNER_STATIC_1
+        try {
+            rbtLoadGame1.classList.remove('show');
+            document.getElementById('RTBStatic1').style.display = 'none';
+        } catch (e) {
+            console.error('CRASH off RTBStatic1: ', e.message);
+        }
+        #endif
+        #if BANNER_STATIC_2
+        try {
+            rbtLoadGame2.classList.remove('show');
+            document.getElementById('RTBStatic2').style.display = 'none';
+        } catch (e) {
+            console.error('CRASH off RTBStatic2: ', e.message);
+        }
+        #endif
     }
 
     document.body.appendChild(script);

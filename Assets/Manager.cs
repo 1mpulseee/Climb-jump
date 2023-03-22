@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using YG;
+using static UnityEngine.GraphicsBuffer;
+
 public class Manager : MonoBehaviour
 {
     public static Manager Instance { get; private set; }
@@ -55,13 +57,12 @@ public class Manager : MonoBehaviour
     int BestScore;
 
     public GameObject Player;
-    public Transform Camera;
+    public Transform camera;
 
     private Rigidbody2D PlayerRb;
 
     public float Force;
 
-    private Vector2 OldMousePos;
     public SpriteRenderer line;
 
     private bool IsScope = false;
@@ -102,25 +103,25 @@ public class Manager : MonoBehaviour
     }
     void Update()
     {
-        Camera.position = Player.transform.position;
+        camera.position = Player.transform.position;
         if (PlayerRb.velocity.magnitude < .1f)
         {
             if (Input.GetMouseButtonDown(0))
             {
-                OldMousePos = Input.mousePosition;
                 line.enabled = true;
                 IsScope = true;
             }
             if (IsScope)
             {
+                Vector2 center = Camera.main.WorldToScreenPoint(Player.transform.position);
                 if (Input.GetMouseButton(0))
                 {
                     Vector2 NowPos = Input.mousePosition;
-                    float LineDistance = Vector2.Distance(OldMousePos, NowPos);
-                    LineDistance = LineDistance / ((Screen.height + Screen.width) / 2) * 1500;
+                    float LineDistance = Vector2.Distance(center, NowPos);
+                    LineDistance = LineDistance / ((Screen.height + Screen.width) / 2) * 2500;
                     if (LineDistance > 1000)
                         LineDistance = 1000;
-                    float angle = Angle(NowPos, OldMousePos);
+                    float angle = Angle(center, NowPos);
                     line.transform.rotation = Quaternion.Euler(0, 0, angle + 180);
                     line.transform.position = Player.transform.position;
                     line.size = new Vector2(LineDistance / 25, 1);
@@ -130,14 +131,14 @@ public class Manager : MonoBehaviour
                     CastSound.Play();
                     Vector2 NowPos = Input.mousePosition;
                     line.enabled = false;
-                    float LineDistance = Vector2.Distance(OldMousePos, NowPos);
-                    LineDistance = LineDistance / ((Screen.height + Screen.width) / 2) * 1500;
+                    float LineDistance = Vector2.Distance(center, NowPos);
+                    LineDistance = LineDistance / ((Screen.height + Screen.width) / 2) * 2500;
                     if (LineDistance > 1000)
                         LineDistance = 1000;
-                    PlayerRb.AddForce(new Vector3(OldMousePos.x - NowPos.x, OldMousePos.y - NowPos.y).normalized * LineDistance * Force);
-                    int x = -1;
-                    if (OldMousePos.x - NowPos.x > 0)
-                        x = 1;
+                    PlayerRb.AddForce(new Vector3(NowPos.x - center.x, NowPos.y - center.y).normalized * LineDistance * Force);
+                    int x = 1;
+                    if (center.x - NowPos.x > 0)
+                        x = -1;
                     PlayerRb.AddTorque(-LineDistance / 15 * x);
                     IsScope = false;
                 }
@@ -163,6 +164,7 @@ public class Manager : MonoBehaviour
         Player.transform.position = Checkpoints[TargetCheckpoints].transform.position;
         Player.transform.rotation = Quaternion.identity;
         PlayerRb.velocity = Vector2.zero;
+        PlayerRb.angularVelocity = 0;
         trailRenderer.Clear();
     }
     public void NextCheckpoint(GameObject point)
